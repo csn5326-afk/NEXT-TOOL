@@ -7,159 +7,165 @@
     <link rel="icon" href="https://i.ibb.co/RkPzT8b2/IMG-0806.jpg">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { background-color: #000; height: 100vh; width: 100vw; display: flex; justify-content: center; align-items: center; font-family: -apple-system, sans-serif; overflow: hidden; position: relative; }
+        body { background: #000; height: 100vh; width: 100vw; display: flex; justify-content: center; align-items: center; font-family: monospace; overflow: hidden; }
         
-        /* تأكيد ظهور الكانفاس في الخلفية */
-        canvas { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; display: block; }
-        #plexus-canvas { z-index: 1; pointer-events: none; }
-        #matrix-canvas { z-index: 50; display: none; background: #000; }
+        /* طبقات التأثيرات */
+        #bg-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+        #matrix-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 60; display: none; background: #000; }
 
-        /* Modal & UI */
-        #custom-paste-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(8px); }
-        .modal-content { background: #111; border: 1px solid #ff0000; padding: 30px; border-radius: 20px; width: 85%; max-width: 320px; text-align: center; }
-        #modal-input { width: 100%; padding: 15px; background: #000; border: 1px solid #ff0000; color: #fff; border-radius: 12px; margin-bottom: 20px; text-align: center; outline: none; }
-        .m-btn { padding: 12px 20px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; color: #fff; }
+        /* شاشة القفل */
+        #lock-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
+        #password-input { background: rgba(255,0,0,0.1); border: 2px solid #f00; padding: 15px; color: #fff; text-align: center; border-radius: 12px; outline: none; width: 260px; font-size: 16px; }
         
-        #lock-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(15px); }
-        #password-input { background: rgba(255, 0, 0, 0.1); border: 2px solid #ff0000; padding: 18px; color: #fff; font-size: 18px; text-align: center; border-radius: 15px; outline: none; }
+        /* خانة جاري التحميل المعدلة */
+        #loading-box { display: none; margin-top: 20px; color: #f00; text-align: center; }
+        .spinner { width: 30px; height: 30px; border: 3px solid rgba(255,0,0,0.3); border-top: 3px solid #f00; border-radius: 50%; animation: spin 1s linear infinite; margin: 10px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        .container { position: relative; z-index: 10; width: 90%; max-width: 380px; text-align: center; display: none; }
-        .profile-container { width: 110px; height: 110px; margin: 0 auto 25px; border: 2px solid #ff0000; border-radius: 25px; box-shadow: 0 0 25px #f00; overflow: hidden; }
-        .profile-container img { width: 100%; height: 100%; object-fit: cover; }
+        /* الواجهة الرئيسية */
+        .container { position: relative; z-index: 100; width: 90%; max-width: 360px; text-align: center; display: none; }
+        .profile-img { width: 100px; height: 100px; margin: 0 auto 20px; border: 2px solid #f00; border-radius: 20px; box-shadow: 0 0 20px #f00; overflow: hidden; }
+        .profile-img img { width: 100%; height: 100%; object-fit: cover; }
         
-        h1 { color: #fff; font-size: 24px; letter-spacing: 3px; text-shadow: 0 0 10px #ff0000; margin-bottom: 35px; }
-        .button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .action-btn { background: rgba(255, 0, 0, 0.05); color: #fff; border: 1px solid #f00; border-radius: 12px; padding: 20px 5px; font-size: 10px; font-weight: bold; text-transform: uppercase; cursor: pointer; }
-        #id-input-field { background: #000; border: 1px solid #ff0000; padding: 18px; width: 100%; color: #fff; border-radius: 12px; text-align: center; margin-bottom: 10px; outline: none; }
-        .paste-btn { background: none; border: 1px dashed #f00; color: #f00; padding: 10px; width: 100%; border-radius: 10px; margin-bottom: 20px; font-size: 10px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .btn { background: rgba(255,0,0,0.05); color: #fff; border: 1px solid #f00; border-radius: 10px; padding: 18px 5px; font-size: 10px; font-weight: bold; cursor: pointer; }
         
-        #final-result { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 100; width: 85%; display: none; text-align: center; }
-        .res-box { background: #000; border: 1px solid #f00; color: #fff; padding: 20px; border-radius: 15px; margin-bottom: 10px; }
+        /* نافذة اللصق المخصصة (بدون اسم ملف) */
+        #paste-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10000; display: none; justify-content: center; align-items: center; }
+        .modal-ui { background: #111; border: 1px solid #f00; padding: 25px; border-radius: 15px; width: 80%; text-align: center; }
+        #modal-input { width: 100%; padding: 12px; background: #000; border: 1px solid #f00; color: #fff; margin-bottom: 15px; text-align: center; outline: none; }
+
+        #final-ui { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 200; display: none; width: 80%; text-align: center; }
+        .res { background: #000; border: 1px solid #f00; color: #fff; padding: 15px; border-radius: 10px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-    <canvas id="plexus-canvas"></canvas>
+    <canvas id="bg-canvas"></canvas>
     <canvas id="matrix-canvas"></canvas>
 
-    <div id="custom-paste-modal">
-        <div class="modal-content">
+    <div id="lock-screen">
+        <div class="profile-img"><img src="https://i.ibb.co/RkPzT8b2/IMG-0806.jpg"></div>
+        <input type="password" id="password-input" placeholder="ENTER KEY" onkeydown="handleLogin(event)">
+        <div id="loading-box">
+            <div class="spinner"></div>
+            <p>SYSTEM LOADING...</p>
+        </div>
+    </div>
+
+    <div id="paste-modal">
+        <div class="modal-ui">
             <h3 style="color:#fff; margin-bottom:15px">PASTE ID</h3>
-            <input type="text" id="modal-input" placeholder="Type or paste...">
+            <input type="text" id="modal-input" placeholder="...">
             <div style="display:flex; gap:10px">
-                <button class="m-btn" style="background:#333" onclick="closeModal()">CANCEL</button>
-                <button class="m-btn" style="background:#f00" onclick="confirmPaste()">OK</button>
+                <button class="btn" style="flex:1" onclick="closeP()">CANCEL</button>
+                <button class="btn" style="flex:1; background:#f00" onclick="confirmP()">OK</button>
             </div>
         </div>
     </div>
 
-    <div id="lock-screen">
-        <input type="password" id="password-input" placeholder="ACCESS KEY" onkeydown="checkKey(event)">
-    </div>
-
     <div id="main-ui" class="container">
-        <div class="profile-container"><img src="https://i.ibb.co/RkPzT8b2/IMG-0806.jpg"></div>
-        <h1>NEXT FULL TOOL</h1>
-        <div class="button-grid">
-            <button class="action-btn" onclick="openInput()">BAN PLAYER</button>
-            <button class="action-btn" onclick="openInput()">CHECK PLAYER</button>
-            <button class="action-btn" onclick="openInput()">GLITCH BAN</button>
-            <button class="action-btn" onclick="openInput()">INFO PLAYER</button>
-            <button class="action-btn" onclick="openInput()">INFO ROOM</button>
-            <button class="action-btn" onclick="openInput()">SERVER INFO</button>
-            <button class="action-btn" onclick="openInput()">GHOST MODE</button>
-            <button class="action-btn" onclick="openInput()">BYPASS</button>
+        <h2 style="color:#fff; margin-bottom:30px; letter-spacing:2px">NEXT FULL TOOL</h2>
+        <div class="grid">
+            <button class="btn" onclick="toID()">BAN PLAYER</button>
+            <button class="btn" onclick="toID()">CHECK PLAYER</button>
+            <button class="btn" onclick="toID()">GLITCH BAN</button>
+            <button class="btn" onclick="toID()">INFO PLAYER</button>
+            <button class="btn" onclick="toID()">INFO ROOM</button>
+            <button class="btn" onclick="toID()">SERVER INFO</button>
+            <button class="btn" onclick="toID()">GHOST MODE</button>
+            <button class="btn" onclick="toID()">BYPASS</button>
         </div>
     </div>
 
-    <div id="id-page" class="container">
-        <input type="number" id="id-input-field" placeholder="ID NUMBER">
-        <button class="paste-btn" onclick="openModal()">PASTE FROM CLIPBOARD</button>
-        <button class="action-btn" style="width:100%; font-size:14px" onclick="runMatrix()">EXECUTE</button>
-        <p style="color:#f00; margin-top:20px; cursor:pointer" onclick="showMain()">[ BACK ]</p>
+    <div id="id-ui" class="container">
+        <input type="number" id="id-field" placeholder="TARGET ID" style="width:100%; background:#000; border:1px solid #f00; padding:15px; color:#fff; border-radius:10px; margin-bottom:10px; outline:none">
+        <button class="btn" style="width:100%; border-style:dashed; margin-bottom:15px" onclick="openP()">PASTE FROM CLIPBOARD</button>
+        <button class="btn" style="width:100%; font-size:14px; background:rgba(255,0,0,0.2)" onclick="startEx()">EXECUTE COMMAND</button>
+        <p style="color:#f00; margin-top:20px; cursor:pointer" onclick="toMain()">[ BACK ]</p>
     </div>
 
-    <div id="final-result">
-        <div class="res-box" id="res-target"></div>
-        <div class="res-box" style="color:#f00">SUCCESSFULLY</div>
-        <p style="color:#f00; cursor:pointer" onclick="location.reload()">[ MENU ]</p>
+    <div id="final-ui">
+        <div class="res" id="res-id"></div>
+        <div class="res" style="color:#f00; box-shadow:0 0 15px #f00">BANNED SUCCESSFULLY</div>
+        <p style="color:#f00; cursor:pointer" onclick="location.reload()">[ RETURN ]</p>
     </div>
 
     <script>
-        // تأثير الشبكة (Plexus)
-        const pCanvas = document.getElementById('plexus-canvas');
-        const pCtx = pCanvas.getContext('2d');
-        let dots = [];
+        // محرك الخلفية (Plexus) - معدل ليعمل فوراً
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let points = [];
 
-        function initPlexus() {
-            pCanvas.width = window.innerWidth;
-            pCanvas.height = window.innerHeight;
-            dots = [];
-            for(let i=0; i<50; i++) {
-                dots.push({
-                    x: Math.random() * pCanvas.width,
-                    y: Math.random() * pCanvas.height,
-                    vx: (Math.random() - 0.5) * 0.5,
-                    vy: (Math.random() - 0.5) * 0.5
-                });
-            }
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            points = [];
+            for(let i=0; i<40; i++) points.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, vx: (Math.random()-0.5)*0.6, vy: (Math.random()-0.5)*0.6});
         }
 
-        function drawPlexus() {
-            pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
-            dots.forEach((p, i) => {
+        function animate() {
+            ctx.clearRect(0,0,canvas.width, canvas.height);
+            points.forEach((p, i) => {
                 p.x += p.vx; p.y += p.vy;
-                if(p.x < 0 || p.x > pCanvas.width) p.vx *= -1;
-                if(p.y < 0 || p.y > pCanvas.height) p.vy *= -1;
-                
-                pCtx.fillStyle = "red";
-                pCtx.beginPath(); pCtx.arc(p.x, p.y, 1.5, 0, Math.PI*2); pCtx.fill();
-
-                for(let j=i+1; j<dots.length; j++) {
-                    let d = Math.hypot(p.x - dots[j].x, p.y - dots[j].y);
-                    if(d < 120) {
-                        pCtx.strokeStyle = `rgba(255, 0, 0, ${1 - d/120})`;
-                        pCtx.lineWidth = 0.5;
-                        pCtx.beginPath(); pCtx.moveTo(p.x, p.y); pCtx.lineTo(dots[j].x, dots[j].y); pCtx.stroke();
+                if(p.x<0 || p.x>canvas.width) p.vx *= -1;
+                if(p.y<0 || p.y>canvas.height) p.vy *= -1;
+                ctx.fillStyle = "#f00";
+                ctx.beginPath(); ctx.arc(p.x, p.y, 1.2, 0, Math.PI*2); ctx.fill();
+                for(let j=i+1; j<points.length; j++) {
+                    let d = Math.hypot(p.x-points[j].x, p.y-points[j].y);
+                    if(d<100) {
+                        ctx.strokeStyle = `rgba(255,0,0,${1-d/100})`;
+                        ctx.lineWidth = 0.4;
+                        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(points[j].x, points[j].y); ctx.stroke();
                     }
                 }
             });
-            requestAnimationFrame(drawPlexus);
+            requestAnimationFrame(animate);
         }
 
-        // تشغيل التأثيرات فوراً
-        window.addEventListener('resize', initPlexus);
-        initPlexus();
-        drawPlexus();
+        window.addEventListener('resize', resize);
+        resize(); animate();
 
-        // منطق التطبيق
-        function checkKey(e) { if(e.key === "Enter" && document.getElementById('password-input').value.toUpperCase() === "NEXTHEX") { document.getElementById('lock-screen').style.display='none'; document.getElementById('main-ui').style.display='block'; } }
-        function openInput() { document.getElementById('main-ui').style.display='none'; document.getElementById('id-page').style.display='block'; }
-        function showMain() { document.getElementById('id-page').style.display='none'; document.getElementById('main-ui').style.display='block'; }
-        function openModal() { document.getElementById('custom-paste-modal').style.display='flex'; }
-        function closeModal() { document.getElementById('custom-paste-modal').style.display='none'; }
-        function confirmPaste() { let v = document.getElementById('modal-input').value; if(v) document.getElementById('id-input-field').value=v; closeModal(); }
+        // منطق الدخول والتحميل
+        function handleLogin(e) {
+            if(e.key === "Enter") {
+                if(document.getElementById('password-input').value.toUpperCase() === "NEXTHEX") {
+                    document.getElementById('password-input').style.display = "none";
+                    document.getElementById('loading-box').style.display = "block";
+                    setTimeout(() => {
+                        document.getElementById('lock-screen').style.display = "none";
+                        document.getElementById('main-ui').style.display = "block";
+                    }, 2000); // مدة التحميل ثانيتين
+                }
+            }
+        }
 
-        function runMatrix() {
-            let id = document.getElementById('id-input-field').value; if(!id) return;
-            document.getElementById('id-page').style.display='none';
-            const mCanvas = document.getElementById('matrix-canvas');
-            mCanvas.style.display='block';
-            mCanvas.width = window.innerWidth; mCanvas.height = window.innerHeight;
-            const mCtx = mCanvas.getContext('2d');
-            const columns = Math.floor(mCanvas.width / 20);
-            const drops = Array(columns).fill(1);
+        // التنقل واللصق
+        function toID() { document.getElementById('main-ui').style.display='none'; document.getElementById('id-ui').style.display='block'; }
+        function toMain() { document.getElementById('id-ui').style.display='none'; document.getElementById('main-ui').style.display='block'; }
+        function openP() { document.getElementById('paste-modal').style.display='flex'; }
+        function closeP() { document.getElementById('paste-modal').style.display='none'; }
+        function confirmP() { let v = document.getElementById('modal-input').value; if(v) document.getElementById('id-field').value=v; closeP(); }
 
-            let count = 0;
+        // الماتريكس والنتيجة
+        function startEx() {
+            let id = document.getElementById('id-field').value; if(!id) return;
+            document.getElementById('id-ui').style.display='none';
+            const mc = document.getElementById('matrix-canvas');
+            mc.style.display='block'; mc.width=window.innerWidth; mc.height=window.innerHeight;
+            const mctx = mc.getContext('2d');
+            const drops = Array(Math.floor(mc.width/20)).fill(1);
+            let frame = 0;
             let mInt = setInterval(() => {
-                mCtx.fillStyle = "rgba(0,0,0,0.1)"; mCtx.fillRect(0,0,mCanvas.width, mCanvas.height);
-                mCtx.fillStyle = "#f00"; mCtx.font = "15px monospace";
+                mctx.fillStyle="rgba(0,0,0,0.1)"; mctx.fillRect(0,0,mc.width,mc.height);
+                mctx.fillStyle="#f00"; mctx.font="15px monospace";
                 drops.forEach((y, i) => {
-                    mCtx.fillText(Math.floor(Math.random()*10), i*20, y*20);
-                    if(y*20 > mCanvas.height && Math.random() > 0.975) drops[i] = 0;
+                    mctx.fillText(Math.floor(Math.random()*10), i*20, y*20);
+                    if(y*20 > mc.height && Math.random()>0.975) drops[i]=0;
                     drops[i]++;
                 });
-                if(count++ > 100) { clearInterval(mInt); mCanvas.style.display='none'; document.getElementById('res-target').innerText="ID: "+id; document.getElementById('final-result').style.display='block'; }
+                if(frame++ > 80) { clearInterval(mInt); mc.style.display='none'; document.getElementById('res-id').innerText="TARGET: "+id; document.getElementById('final-ui').style.display='block'; }
             }, 30);
         }
     </script>
